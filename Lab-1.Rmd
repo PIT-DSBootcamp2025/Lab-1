@@ -1,7 +1,9 @@
 ---
-title: 'Lab 1'
+title: "Lab 1"
 author: "Alonzo Finch"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ## Initializing R
@@ -63,10 +65,10 @@ The chunk below also includes two equivalent versions of variable assignment. Yo
 
 ```{r}
 places <- read.csv("data/cdc_places_dc.csv") 
-dp02 = read_csv("data/acs_dp02_data.csv")
-dp03 = read_csv("data/acs_dp03_data.csv")
-dp04 = read_csv("data/acs_dp04_data.csv")
-dp05 = read_csv("data/acs_dp05_data.csv")
+dp02 = read_csv("data/acs_dp02_data.csv", show_col_types = F)
+dp03 = read_csv("data/acs_dp03_data.csv", show_col_types = F)
+dp04 = read_csv("data/acs_dp04_data.csv", show_col_types = F)
+dp05 = read_csv("data/acs_dp05_data.csv", show_col_types = F)
 ```
 
 
@@ -93,17 +95,16 @@ sapply(places, class)
 ```
 
 
-Now that we've inspected our data, we can convert our datatable into a tibble. A tibble is a tidyverse version of a datatable which provides some useful features for data cleaning. Below is an example of a tidyverse data cleaning pipeline. In our list of column names above, we see several columns with "_Crude95CI" in the name, representing that these are 95% Confidence Intervals of the estimate given. These columns are not as useful to us to it makes sense to exclude them. Also, since we are only looking at DC area data, we can exclude any columns that tells us the data is from DC because they won't change for any entries. 
+Now that we've inspected our data, we can convert our datatable into a tibble. A tibble is a tidyverse version of a datatable which provides some useful features for data cleaning. Below is an example of a tidyverse data cleaning pipeline. We only want the variable names, their values, and the id of the census tract (often called FIPS code). We also want to pivot the data so the variables are each their own column and the census tracts are the rows. 
 
 The code chunk below performs both of these operations at once using the tidyverse syntax of pipelines. There are two different ways to indicate a pipeline. **%>%** and **|>** are both pipeline operators. Pipelines pass the object at the start (usually a tibble) to the rest of the functions as an argument automatically, saving us some typing and simplifying our code. Pipelines also allow us to call column names without the use of quotation marks, which is helpful for some applications.
 
 
 ```{r}
-places_tibble = as_tibble(places)
-places_tibble = places_tibble %>% 
-  select(!c(StateAbbr, StateDesc, CountyName, CountyFIPS)) |>
-  select(!contains("_Crude95CI")) %>% # This line drops all the columns that are Confidence Interval estimates
-  rename_all(~ str_remove(.x, "_CrudePrev")) # This line removes the string "_CrudePrev" from the remaining columns
+places_tibble = as_tibble(places) |> 
+  group_by(Year, LocationName,LocationID) %>%
+  select(c(Year, LocationName, LocationID, Data_Value, MeasureId, TotalPopulation, TotalPop18plus, Geolocation)) %>%
+  pivot_wider(names_from = MeasureId, values_from = Data_Value)
 ```
 
 
@@ -115,8 +116,12 @@ summary(places_tibble)
 ```
 
 
+Because we have two years available to us, we will choose only one for now.
+
+
 ```{r}
-places = places_tibble
+places = places_tibble %>% ungroup() %>% filter(Year == 2022) %>% select(!c("LocationID", "Year")) %>% rename(geoid = LocationName)
+summary(places)
 ```
 
 
@@ -124,16 +129,170 @@ places = places_tibble
 
 We'll now do the same procedure above for the American Community Survey Data.
 
+If you inspected the csv file (for instance in excel), you'd see that the first two rows are both column names. The actually descriptive column name is row 2, so we will use one of the features of **read_csv** from **readr** to skip the first row.
+
+
+```{r}
+dp02 = read_csv("data/acs_dp02_data.csv", skip = 1, show_col_types = F)
+dp03 = read_csv("data/acs_dp03_data.csv", skip = 1, show_col_types = F)
+dp04 = read_csv("data/acs_dp04_data.csv", skip = 1, show_col_types = F)
+dp05 = read_csv("data/acs_dp05_data.csv", skip = 1, show_col_types = F)
+```
+
+
+#### DP02
+
 
 ```{r}
 head(dp02)
+colnames(dp02)
+dim(dp02)
+sapply(dp02, class)
 
+dp02_tibble = as_tibble(dp02) %>% 
+  select(!contains("Margin of Error!!")) %>%
+  select(!contains("Percent!!")) %>%
+  select(!contains("Percent Margin of Error!!")) %>%
+  mutate(Geography = str_remove(Geography, "1400000US")) %>%
+  select(!c("Geographic Area Name")) %>%
+  rename(geoid = Geography) %>%
+  mutate(geoid = as.numeric(geoid))
 ```
 
-
-# Census API
 
 ```{r}
-
+dp02 = dp02_tibble
 ```
+
+
+#### DP03
+
+
+```{r}
+head(dp03)
+colnames(dp03)
+dim(dp03)
+sapply(dp03, class)
+
+dp03_tibble = as_tibble(dp03) %>% 
+  select(!contains("Margin of Error!!")) %>%
+  select(!contains("Percent!!")) %>%
+  select(!contains("Percent Margin of Error!!")) %>%
+  mutate(Geography = str_remove(Geography, "1400000US")) %>%
+  select(!c("Geographic Area Name")) %>%
+  rename(geoid = Geography) %>%
+  mutate(geoid = as.numeric(geoid))
+```
+
+
+```{r}
+dp03 = dp03_tibble
+```
+
+
+#### DP04
+
+
+```{r}
+head(dp04)
+colnames(dp04)
+dim(dp04)
+sapply(dp04, class)
+
+dp04_tibble = as_tibble(dp04) %>% 
+  select(!contains("Margin of Error!!")) %>%
+  select(!contains("Percent!!")) %>%
+  select(!contains("Percent Margin of Error!!")) %>%
+  mutate(Geography = str_remove(Geography, "1400000US")) %>%
+  select(!c("Geographic Area Name")) %>%
+  rename(geoid = Geography) %>%
+  mutate(geoid = as.numeric(geoid))
+```
+
+
+```{r}
+dp04 = dp04_tibble
+```
+
+
+#### DP05
+
+
+```{r}
+head(dp05)
+colnames(dp05)
+dim(dp05)
+sapply(dp05, class)
+
+dp05_tibble = as_tibble(dp05) %>% 
+  select(!contains("Margin of Error!!")) %>%
+  select(!contains("Percent!!")) %>%
+  select(!contains("Percent Margin of Error!!")) %>%
+  mutate(Geography = str_remove(Geography, "1400000US")) %>%
+  select(!c("Geographic Area Name")) %>%
+  rename(geoid = Geography) %>%
+  mutate(geoid = as.numeric(geoid))
+```
+
+
+```{r}
+dp05 = dp05_tibble
+```
+
+
+### Combining Data
+
+Now that we've (mostly) cleaned our data, we can combine our datasets together.
+First we must decide which axis we want to join (or combine) our dataset across. For our purposes, we're doing a column join. Then, we need to define the type of join. More detail about the different types of joins is available through other sources, but an overview is that different types of joins have the potential to drop any unmatched columns. The code below performs a left join for simplicity. A left join drops any unmatched columns from the second datatable.
+
+
+```{r}
+df = left_join(places, dp02, by = "geoid")
+df = left_join(df, dp03, by = "geoid")
+df = left_join(df, dp04, by = "geoid")
+df = left_join(df, dp05, by = "geoid")
+```
+
+
+We can also add the census tract geometries for plotting later using the **tigris** package.
+
+
+```{r}
+dc_tracts <- tracts(state = "DC", cb = TRUE, year = 2022) %>% mutate(GEOID = as.numeric(GEOID)) %>% select(c(AWATER, ALAND, GEOID, geometry)) %>% rename(geoid = "GEOID")
+df = left_join(df, dc_tracts, by = "geoid")
+```
+
+
+The df object above is our final datatable containing all of the estimates for our measures of interest as well as geoids for the census tracts.
+
+
+## Plotting
+
+This section will show you the initial code for plotting in tidyverse using its child package **ggplot2**. There is a comprehensive website for both tidyverse and ggplot2 online published by their maintainers, so check that out if you want more information on how both packages work.
+
+For the code below, I'll first plot a histogram of the total population so we can see its overall distribution, then I'll plot and export a spatial- or geo-plot of the same variable to show you an example of how to export a plot. We will go over this more in later lab sessions as well.
+
+
+```{r}
+ggplot(data = df) +
+  geom_histogram(aes(x = TotalPopulation), bins = 35, fill = "goldenrod", col = NA) +
+  labs(title = "Plot of Total Population", subtitle = "Histogram", x = "Population", y = "Count")
+```
+
+
+```{r}
+population_plot = ggplot(df, aes(geometry = geometry, fill = TotalPopulation)) + 
+  geom_sf(col = NA) + 
+  coord_sf() + 
+  scale_fill_viridis_c() + 
+  labs(title = "Total Population", subtitle = "Spatial Plot", 
+       xlab = "Longitude", ylab = "Latitude", fill = "Population") + 
+  theme(legend.position = "top", legend.title.position = "top", plot.margin = unit(c(0.05, 0.05, 0.05, 0.05), "cm"))
+
+ggsave("population_plot.png", plot = population_plot)
+```
+
+
+The above chunk saves the spatial plot to the same folder that this markdown file is in. The file is titled "population_plot.png"
+
 
