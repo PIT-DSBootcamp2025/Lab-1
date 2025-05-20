@@ -1,0 +1,139 @@
+---
+title: 'Lab 1'
+author: "Alonzo Finch"
+output: pdf_document
+---
+
+## Initializing R
+
+When starting a new assignment or project in R, I recommend using R Markdown (file type .Rmd). R Markdown has some advantages over R script files (file type .R), such as running blocks of code, being able to see the output of your code chunks, including text in addition to R code in your file, and (most importantly) the ability to export your R output as an HTML or PDF document.
+
+This is an R markdown file.
+
+Below are three different examples of code chunks. Note that you can name chunks by including text after the r designation in the brackets. Ex. {r test}
+
+The flags include after the comma tell markdown how to render the code chunk. The flag *include* determines whether the chunk and its output will be included in the render. *include = F* will not render either.
+ 
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+The flag *echo = F* will render the output but not the code chunk itself.
+
+
+```{r echo, echo = F}
+
+```
+
+
+The flag *warning = F* will suppress any warnings that are included in the output.
+
+
+```{r warning, warning = F}
+# This is how you type comments in your R code. Comments don't produce an output but act as a note separating or explaining what's written.
+```
+
+
+The flags above are all set to false, which is done by using **F** or **FALSE**. They can be set equal using **T*** or **TRUE**.
+
+## Loading Packages
+
+Below is a chunk of R code. This code chunk loads the packages we will be using for this lab.
+It is important to remember that to use a package in R, you must download the package to you system **and** load the package in R like below.
+
+
+```{r}
+library(readr)
+library(stringr)
+library(ggplot2)
+library(tidyverse) 
+library(tigris)
+#require(tigris) #represents an alternative method. Returns a warning instead of an error if a package is not installed
+```
+
+
+## Loading Data
+
+Below is a chunk demonstrating how to load data in R. The first line uses traditional R syntax to load the CDC PLACES dataset. R comes installed with several built in functions and features, one of which is the function **read.csv** (type ?read.csv in the console to learn more about the function). The other datasets are loaded using **read_csv** from the **readr** package. **readr** provides some nice options for reading and writing datasets that are useful for more complicated projects.
+
+The chunk below also includes two equivalent versions of variable assignment. You can name a variable anything (as long as it doesn't start with a number) and assign values using **=** or **<-**. The lines below assign the output of the function to a variable. In R Markdown, all assigned variables appear in your *Environment* window.
+
+
+```{r}
+places <- read.csv("data/cdc_places_dc.csv") 
+dp02 = read_csv("data/acs_dp02_data.csv")
+dp03 = read_csv("data/acs_dp03_data.csv")
+dp04 = read_csv("data/acs_dp04_data.csv")
+dp05 = read_csv("data/acs_dp05_data.csv")
+```
+
+
+## Exploratory Data Analysis
+
+### CDC PLACES
+
+Once you have the dataset loaded, I like to first look at a small snippet of the data and get a sense of what information it contains. For this part I will be focusing on the CDC PLACES data. Below are three functions that are useful for this task. **head** allows you to look at the first few rows of a datatable. There is also a corresponding function **tail**. **colnames** gets a list of the column names of the dataset. **dim** gets the dimensions of the datatable, which lets us know how many rows and columns we have in our dataset.
+
+
+```{r}
+head(places)
+colnames(places)
+dim(places)
+```
+
+
+Another import part of data inspection is looking at the data type or class (e.g. string, double, integer, factor) of your columns. In the chunk below are two methods for getting the types. This is important because certain functions and methods only work on specific data types so if any are incorrect (like an integer being typed as a string), we would need to fix that problem.
+
+
+```{r}
+# str(places) #commented out due to the output containing a lot of information
+sapply(places, class)
+```
+
+
+Now that we've inspected our data, we can convert our datatable into a tibble. A tibble is a tidyverse version of a datatable which provides some useful features for data cleaning. Below is an example of a tidyverse data cleaning pipeline. In our list of column names above, we see several columns with "_Crude95CI" in the name, representing that these are 95% Confidence Intervals of the estimate given. These columns are not as useful to us to it makes sense to exclude them. Also, since we are only looking at DC area data, we can exclude any columns that tells us the data is from DC because they won't change for any entries. 
+
+The code chunk below performs both of these operations at once using the tidyverse syntax of pipelines. There are two different ways to indicate a pipeline. **%>%** and **|>** are both pipeline operators. Pipelines pass the object at the start (usually a tibble) to the rest of the functions as an argument automatically, saving us some typing and simplifying our code. Pipelines also allow us to call column names without the use of quotation marks, which is helpful for some applications.
+
+
+```{r}
+places_tibble = as_tibble(places)
+places_tibble = places_tibble %>% 
+  select(!c(StateAbbr, StateDesc, CountyName, CountyFIPS)) |>
+  select(!contains("_Crude95CI")) %>% # This line drops all the columns that are Confidence Interval estimates
+  rename_all(~ str_remove(.x, "_CrudePrev")) # This line removes the string "_CrudePrev" from the remaining columns
+```
+
+
+Now that we have something cleaner, we can look at a summary of our data using the function **summary**. **summary** is a great function for getting quick summaries of all different types of R objects, from regression outputs to datatables.
+
+
+```{r}
+summary(places_tibble)
+```
+
+
+```{r}
+places = places_tibble
+```
+
+
+### ACS Data
+
+We'll now do the same procedure above for the American Community Survey Data.
+
+
+```{r}
+head(dp02)
+
+```
+
+
+# Census API
+
+```{r}
+
+```
+
